@@ -8,7 +8,7 @@ const styles = {
   userAvatar: { width: '48px', height: '48px', background: '#7c3aed', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' },
   button: { padding: '12px 24px', background: 'linear-gradient(135deg, #a855f7, #ec4899)', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
   card: { background: 'rgba(51, 65, 85, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(100, 116, 139, 0.3)', borderRadius: '20px', padding: '20px', marginBottom: '20px', cursor: 'pointer', transition: 'all 0.3s' },
-  input: { width: '100%', padding: '12px', background: '#334155', border: '2px solid #475569', borderRadius: '12px', color: 'white', fontSize: '16px', marginBottom: '15px' },
+  input: { width: '350px', padding: '12px', background: '#334155', border: '2px solid #475569', borderRadius: '12px', color: 'white', fontSize: '16px', marginBottom: '15px' },
   modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 50 },
   bottomNav: { position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth: '414px', margin: '0 auto', background: 'rgba(30, 41, 59, 0.95)', backdropFilter: 'blur(20px)', borderTop: '1px solid #475569', padding: '12px', display: 'flex', justifyContent: 'space-around' },
   navBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 16px', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', borderRadius: '12px', fontSize: '12px', transition: 'all 0.3s' },
@@ -21,10 +21,10 @@ export default function App() {
   const [isAuth, setIsAuth] = useState(false);
   const [user, setUser] = useState(null);
   const [section, setSection] = useState('home');
-  const [pets, setPets] = useState([
-    { id: 1, name: 'Luna', emoji: '🐱', breed: 'Persa', age: 3, status: 'healthy' },
-    { id: 2, name: 'Rex', emoji: '🐕', breed: 'Labrador', age: 5, status: 'attention' }
-  ]);
+  //const [pets, setPets] = useState([
+  //  { id: 1, name: 'Luna', emoji: '🐱', breed: 'Persa', age: 3, status: 'healthy' },
+  //  { id: 2, name: 'Rex', emoji: '🐕', breed: 'Labrador', age: 5, status: 'attention' }
+  //]);
   const [quests, setQuests] = useState([
     { id: 1, title: 'Exercício Diário', desc: 'Faça 30min de atividade', xp: 15, progress: 3, total: 7, active: true },
     { id: 2, title: 'Momento Carinho', desc: 'Dedique 15min de carinho', xp: 10, progress: 1, total: 1, active: true }
@@ -41,27 +41,84 @@ export default function App() {
     }
   }, []);
 
-  const login = (email, pass) => {
-    axios.post("http://52.72.103.241:3000/login", {
-      email: email,
-      password: pass
-    })
-    .then((response) => {
-      console.log(response);
-    })
-    .catch((error) => {
-      console.log("ERROR:", error);
-    });
+  const [pets, setPets] = useState([]);
 
-    const u = mockUsers.find(x => x.email === email && x.password === pass);
-    if (u) {
-      setUser(u);
-      setIsAuth(true);
-      localStorage.setItem('catpet_user', JSON.stringify(u));
-      return true;
+  const getPets = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("catpet_user"));
+      const token = localStorage.getItem("catpet_token");
+
+      if (!user || !token) return;
+
+      const response = await axios.get(
+        `http://52.72.103.241:3000/users/${user.id}/pets`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setPets(response.data.pets);
+    } catch (error) {
+      console.error("GET PETS ERROR:", error);
     }
-    return false;
   };
+
+
+  const handleRegister = async (data) => {
+    try {
+      const res = await axios.post("http://52.72.103.241:3000/signup", { user: data });
+
+      const newUser = res.data.user;
+      const token = res.data.token;
+
+      // Save to state
+      setUser(newUser);
+      setIsAuth(true);
+
+      // Save to localStorage
+      localStorage.setItem("catpet_user", JSON.stringify(newUser));
+      localStorage.setItem("catpet_token", token);
+
+      // Redirect to dashboard
+      setSection("home");
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
+
+
+
+  const login = async (email, pass) => {
+    try {
+      const response = await axios.post("http://52.72.103.241:3000/login", {
+        email: email,
+        password: pass
+      });
+
+      const user = response.data.user;
+      const token = response.data.token;
+
+      // salvar estado
+      setUser(user);
+      setIsAuth(true);
+
+      // salvar localStorage
+      localStorage.setItem("catpet_user", JSON.stringify(user));
+      localStorage.setItem("catpet_token", token);
+
+      return true;
+    } catch (error) {
+      console.log("LOGIN ERROR:", error);
+      return false;
+    }
+  };
+
 
   const logout = () => {
     setUser(null);
@@ -96,13 +153,14 @@ export default function App() {
     setTimeout(() => setNotif(null), 3000);
   };
 
-  if (!isAuth) return <AuthScreen onLogin={login} />;
+  if (!isAuth) return <AuthScreen onLogin={login} onRegister={handleRegister} />;
+
 
   return (
     <div style={styles.app}>
       <div style={styles.container}>
         <Header user={user} stats={stats} onLogout={logout} />
-        
+
         <div style={{ paddingBottom: '100px', padding: '20px' }}>
           {section === 'home' && <Home stats={stats} pets={pets} />}
           {section === 'pets' && <Pets pets={pets} onAdd={() => setModal('pet')} />}
@@ -120,20 +178,94 @@ export default function App() {
   );
 }
 
-function AuthScreen({ onLogin }) {
+function Register({ onBack, onRegister }) {
+  const [form, setForm] = useState({
+    email: "",
+    name: "",
+    password: "",
+    password_confirmation: ""
+  });
+
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+
+    if (form.password !== form.password_confirmation) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    const ok = await onRegister(form);
+
+    if (!ok) {
+      setError("Registration failed");
+    }
+  };
+
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #a855f7, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+      <div style={{ background: "rgba(30, 41, 59, 0.95)", borderRadius: "24px", padding: "40px", maxWidth: "400px", width: "100%", border: "1px solid rgba(168, 85, 247, 0.3)" }}>
+
+        <button onClick={onBack} style={{ marginBottom: "20px", background: "transparent", border: "none", color: "#a855f7", cursor: "pointer", fontSize: "16px" }}>
+          ← Back
+        </button>
+
+        <h2 style={{ color: "#fff", textAlign: "center", marginBottom: "20px" }}>Create Account</h2>
+
+        {error && <p style={{ color: "#ef4444", fontSize: "14px" }}>{error}</p>}
+
+        <form onSubmit={submit}>
+          <input name="email" placeholder="Email" value={form.email} onChange={handleChange} style={styles.input} />
+          <input name="name" placeholder="name" value={form.name} onChange={handleChange} style={styles.input} />
+          <input type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} style={styles.input} />
+          <input type="password" name="password_confirmation" placeholder="Confirm password" value={form.password_confirmation} onChange={handleChange} style={styles.input} />
+
+          <button type="submit" style={{ ...styles.button, width: "100%" }}>Create Account</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AuthScreen({ onLogin, onRegister }) {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
+  const [showRegister, setShowRegister] = useState(false);
 
-  const submit = (e) => {
+  if (showRegister) {
+    return (
+      <Register
+        onBack={() => setShowRegister(false)}
+        onRegister={onRegister}
+      />
+    );
+  }
+
+
+
+  const submit = async (e) => {
     e.preventDefault();
-    if (onLogin(email, pass)) setError('');
-    else setError('Email ou senha incorretos');
+    const ok = await onLogin(email, pass);
+
+    if (!ok) setError('Email ou senha incorretos');
   };
+
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #a855f7, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ background: 'rgba(30, 41, 59, 0.95)', borderRadius: '24px', padding: '40px', maxWidth: '400px', width: '100%', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ fontSize: '64px', marginBottom: '16px' }}>🐱</div>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', background: 'linear-gradient(135deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>CatPet</h1>
@@ -143,14 +275,26 @@ function AuthScreen({ onLogin }) {
         <form onSubmit={submit}>
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} />
           <input type="password" placeholder="Senha" value={pass} onChange={(e) => setPass(e.target.value)} style={styles.input} />
-          
+
           {error && <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px' }}>{error}</p>}
 
           <button type="submit" style={{ ...styles.button, width: '100%', marginBottom: '12px' }}>Entrar</button>
-          <button type="button" onClick={() => { setEmail('maria@email.com'); setPass('123456'); }} style={{ ...styles.button, width: '100%', background: '#475569' }}>
+
+          <button type="button"
+            onClick={() => { setEmail('maria@email.com'); setPass('123456'); }}
+            style={{ ...styles.button, width: '100%', background: '#475569' }}>
             🚀 Demo
           </button>
         </form>
+
+        {/* 🔥 ADD NEW REGISTER BUTTON HERE */}
+        <button
+          type="button"
+          onClick={() => setShowRegister(true)}
+          style={{ marginTop: '20px', width: '100%', padding: '12px', background: 'transparent', border: '2px solid #a855f7', borderRadius: '12px', color: '#a855f7', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Criar Conta
+        </button>
 
         <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', marginTop: '24px' }}>
           Demo: maria@email.com / 123456
@@ -159,6 +303,7 @@ function AuthScreen({ onLogin }) {
     </div>
   );
 }
+
 
 function Header({ user, stats, onLogout }) {
   return (
@@ -460,18 +605,18 @@ function AddPetModal({ onClose, onAdd }) {
             <p style={{ color: '#94a3b8', fontSize: '14px' }}>{data.name || 'Novo Pet'}</p>
           </div>
 
-          <input type="text" placeholder="Nome do Pet" value={data.name} onChange={(e) => setData({...data, name: e.target.value})} style={styles.input} required />
+          <input type="text" placeholder="Nome do Pet" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} style={styles.input} required />
 
-          <select value={data.emoji} onChange={(e) => setData({...data, emoji: e.target.value})} style={styles.input}>
+          <select value={data.emoji} onChange={(e) => setData({ ...data, emoji: e.target.value })} style={styles.input}>
             <option value="🐱">🐱 Gato</option>
             <option value="🐕">🐕 Cachorro</option>
             <option value="🐦">🐦 Ave</option>
             <option value="🐰">🐰 Coelho</option>
           </select>
 
-          <input type="text" placeholder="Raça" value={data.breed} onChange={(e) => setData({...data, breed: e.target.value})} style={styles.input} required />
+          <input type="text" placeholder="Raça" value={data.breed} onChange={(e) => setData({ ...data, breed: e.target.value })} style={styles.input} required />
 
-          <input type="number" placeholder="Idade (anos)" value={data.age} onChange={(e) => setData({...data, age: e.target.value})} style={styles.input} required />
+          <input type="number" placeholder="Idade (anos)" value={data.age} onChange={(e) => setData({ ...data, age: e.target.value })} style={styles.input} required />
 
           <button type="submit" style={{ ...styles.button, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <span>+</span>
