@@ -17,7 +17,20 @@ const styles = {
 
 const mockUsers = [{ id: 1, email: 'maria@email.com', password: '123456', name: 'Maria Silva' }];
 
+const specieEmojis = {
+  cat: "🐱",
+  dog: "🐶",
+  bird: "🐦",
+  fish: "🐠",
+  rabbit: "🐰",
+  hamster: "🐹",
+  turtle: "🐢",
+  snake: "🐍",
+  default: "🐾"
+};
+
 export default function App() {
+
   const [isAuth, setIsAuth] = useState(false);
   const [user, setUser] = useState(null);
   const [section, setSection] = useState('home');
@@ -33,6 +46,7 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [notif, setNotif] = useState(null);
 
+
   useEffect(() => {
     const saved = localStorage.getItem('catpet_user');
     if (saved) {
@@ -41,7 +55,15 @@ export default function App() {
     }
   }, []);
 
-  const [pets, setPets] = useState([]);
+  const [pets, setPets] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_pets");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
 
   const getPets = async () => {
     try {
@@ -50,20 +72,33 @@ export default function App() {
 
       if (!user || !token) return;
 
+      // 1. Load cached pets if they exist (fast UI load)
+      const cachedPets = localStorage.getItem("catpet_pets");
+      if (cachedPets) {
+        setPets(JSON.parse(cachedPets));
+      }
+
+      // 2. Fetch latest pets from backend
       const response = await axios.get(
         `http://52.72.103.241:3000/users/${user.id}/pets`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      setPets(response.data.pets);
+      const petsList = response.data.pets || response.data;
+
+      // 3. Save new pets to state
+      setPets(petsList);
+
+      // 4. Save to localStorage
+      localStorage.setItem("catpet_pets", JSON.stringify(petsList));
+
     } catch (error) {
       console.error("GET PETS ERROR:", error);
     }
   };
+
 
 
   const handleRegister = async (data) => {
@@ -83,13 +118,14 @@ export default function App() {
 
       // Redirect to dashboard
       setSection("home");
-
+      getPets()
       return true;
     } catch (err) {
       console.error(err);
       return false;
     }
   };
+
 
 
 
@@ -111,7 +147,7 @@ export default function App() {
       // salvar localStorage
       localStorage.setItem("catpet_user", JSON.stringify(user));
       localStorage.setItem("catpet_token", token);
-
+      getPets()
       return true;
     } catch (error) {
       console.log("LOGIN ERROR:", error);
@@ -386,7 +422,10 @@ function Pets({ pets, onAdd }) {
 
       {pets.map(pet => (
         <div key={pet.id} style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ fontSize: '48px' }}>{pet.emoji}</div>
+          <div style={{ fontSize: '48px' }}>
+            {specieEmojis[pet.specie?.toLowerCase()] || specieEmojis.default}
+          </div>
+
           <div style={{ flex: 1 }}>
             <h3 style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{pet.name}</h3>
             <p style={{ color: '#94a3b8', fontSize: '14px', margin: '4px 0' }}>{pet.breed} • {pet.age} anos</p>
