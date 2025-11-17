@@ -163,11 +163,62 @@ export default function App() {
     showNotif('Até logo!', 'Desconectado com sucesso');
   };
 
-  const addPet = (data) => {
-    setPets([...pets, { ...data, id: Date.now(), status: 'healthy' }]);
-    setModal(null);
-    showNotif('Pet Adicionado! 🎉', `${data.name} foi adicionado!`);
+  const addPet = async (data) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("catpet_user"));
+      const token = localStorage.getItem("catpet_token");
+
+      if (!user || !token) {
+        showNotif("Erro", "Usuário não autenticado");
+        return;
+      }
+
+      // montar o corpo EXATO que o backend espera
+      const body = {
+        pet: {
+          name: data.name,
+          species: data.species,   // <- atualizado
+          breed: data.breed,
+          age: Number(data.age)
+        }
+      };
+      console.log(body)
+
+      // enviar request
+      const response = await axios.post(
+        `http://52.72.103.241:3000/users/${user.id}/pets`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      // o backend deve retornar o novo pet
+      const newPet = response.data.pet || response.data;
+
+      // atualizar estado
+      const updatedPets = [...pets, newPet];
+      setPets(updatedPets);
+
+      // atualizar localStorage
+      localStorage.setItem("catpet_pets", JSON.stringify(updatedPets));
+
+      // fechar modal
+      setModal(null);
+
+      // notificação
+      showNotif("Pet Adicionado! 🎉", `${newPet.name} foi adicionado!`);
+
+    } catch (error) {
+      console.error("ADD PET ERROR:", error);
+      showNotif(
+        "Erro",
+        error.response?.data?.error || "Não foi possível adicionar o pet"
+      );
+    }
   };
+
+
 
   const completeQuest = (id) => {
     setQuests(quests.map(q => {
@@ -623,49 +674,89 @@ function BottomNav({ section, onChange }) {
 }
 
 function AddPetModal({ onClose, onAdd }) {
-  const [data, setData] = useState({ name: '', emoji: '🐱', breed: '', age: '' });
+  const [form, setForm] = useState({
+    name: "",
+    species: "",
+    breed: "",
+    age: ""
+  });
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const submit = (e) => {
     e.preventDefault();
-    if (data.name && data.breed && data.age) onAdd(data);
+    onAdd(form);
   };
 
   return (
-    <div style={styles.modal} onClick={onClose}>
-      <div style={{ background: '#1e293b', borderRadius: '24px', padding: '24px', maxWidth: '400px', width: '100%', border: '1px solid #475569' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h3 style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', margin: 0 }}>Adicionar Pet</h3>
-          <button onClick={onClose} style={{ width: '32px', height: '32px', background: '#334155', border: 'none', borderRadius: '8px', color: '#94a3b8', cursor: 'pointer', fontSize: '18px' }}>×</button>
-        </div>
+    <div style={styles.modal}>
+      <div style={{ background: "#1e293b", padding: "24px", borderRadius: "20px", width: "90%", maxWidth: "400px" }}>
+        <h2 style={{ color: "white", marginBottom: "20px" }}>Adicionar Pet</h2>
 
         <form onSubmit={submit}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '8px' }}>{data.emoji}</div>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>{data.name || 'Novo Pet'}</p>
-          </div>
+          <input
+            name="name"
+            placeholder="Nome"
+            value={form.name}
+            onChange={handleChange}
+            style={styles.input}
+          />
 
-          <input type="text" placeholder="Nome do Pet" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} style={styles.input} required />
-
-          <select value={data.emoji} onChange={(e) => setData({ ...data, emoji: e.target.value })} style={styles.input}>
-            <option value="🐱">🐱 Gato</option>
-            <option value="🐕">🐕 Cachorro</option>
-            <option value="🐦">🐦 Ave</option>
-            <option value="🐰">🐰 Coelho</option>
+          <select
+            name="species"   // <-- IMPORTANTE
+            value={form.species}
+            onChange={handleChange}
+            style={styles.input}
+          >
+            <option value="">Selecione a espécie</option>
+            <option value="cat">Gato 🐱</option>
+            <option value="dog">Cachorro 🐶</option>
+            <option value="bird">Pássaro 🐦</option>
+            <option value="fish">Peixe 🐠</option>
+            <option value="rabbit">Coelho 🐰</option>
+            <option value="hamster">Hamster 🐹</option>
+            <option value="turtle">Tartaruga 🐢</option>
+            <option value="snake">Cobra 🐍</option>
           </select>
 
-          <input type="text" placeholder="Raça" value={data.breed} onChange={(e) => setData({ ...data, breed: e.target.value })} style={styles.input} required />
+          <input
+            name="breed"
+            placeholder="Raça"
+            value={form.breed}
+            onChange={handleChange}
+            style={styles.input}
+          />
 
-          <input type="number" placeholder="Idade (anos)" value={data.age} onChange={(e) => setData({ ...data, age: e.target.value })} style={styles.input} required />
+          <input
+            name="age"
+            type="number"
+            placeholder="Idade"
+            value={form.age}
+            onChange={handleChange}
+            style={styles.input}
+          />
 
-          <button type="submit" style={{ ...styles.button, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <span>+</span>
-            <span>Adicionar Pet</span>
+          <button type="submit" style={{ ...styles.button, width: "100%" }}>
+            Salvar
           </button>
         </form>
+
+        <button
+          onClick={onClose}
+          style={{ marginTop: "16px", width: "100%", padding: "12px", background: "#475569", borderRadius: "12px", color: "white", border: "none" }}
+        >
+          Cancelar
+        </button>
       </div>
     </div>
   );
 }
+
 
 function Notif({ title, msg }) {
   return (
