@@ -85,7 +85,7 @@ const addHealthItem = async (item) => {
       consultas: `/users/${user.id}/consultas`
     };
 
-    const url = `https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev${endpoints[item.category]}`;
+    const url = `http://52.72.103.241:3000${endpoints[item.category]}`;
 
     // -----------------------------
     // SEND REQUEST
@@ -135,7 +135,7 @@ const addHealthItem = async (item) => {
 
       // 2. Fetch latest pets from backend
       const response = await axios.get(
-        `https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/users/${user.id}/pets`,
+        `http://52.72.103.241:3000/users/${user.id}/pets`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -158,7 +158,7 @@ const addHealthItem = async (item) => {
 
   const handleRegister = async (data) => {
     try {
-      const res = await axios.post("https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/signup", { user: data });
+      const res = await axios.post("http://52.72.103.241:3000/signup", { user: data });
 
       const newUser = res.data.user;
       const token = res.data.token;
@@ -187,7 +187,7 @@ const addHealthItem = async (item) => {
 
   const login = async (email, pass) => {
     try {
-      const response = await axios.post("https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/login", {
+      const response = await axios.post("http://52.72.103.241:3000/login", {
         email: email,
         password: pass
       });
@@ -241,7 +241,7 @@ const addHealthItem = async (item) => {
 
       // enviar request
       const response = await axios.post(
-        `https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/users/${user.id}/pets`,
+        `http://52.72.103.241:3000/users/${user.id}/pets`,
         body,
         {
           headers: { Authorization: `Bearer ${token}` }
