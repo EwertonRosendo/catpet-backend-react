@@ -66,12 +66,57 @@ export default function App() {
   });
 
 
-  const addHealthItem = (item) => {
-    const updated = [...healthItems, { id: Date.now(), ...item }];
+const addHealthItem = async (item) => {
+  try {
+    const user = JSON.parse(localStorage.getItem("catpet_user"));
+    const token = localStorage.getItem("catpet_token");
+
+    if (!user || !token) {
+      showNotif("Erro", "Usuário não autenticado");
+      return;
+    }
+
+    // -----------------------------
+    // MAP CATEGORIES TO ENDPOINTS
+    // -----------------------------
+    const endpoints = {
+      alimentacao: `/users/${user.id}/alimentacao`,
+      registros: `/users/${user.id}/registros`,
+      consultas: `/users/${user.id}/consultas`
+    };
+
+    const url = `https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev${endpoints[item.category]}`;
+
+    // -----------------------------
+    // SEND REQUEST
+    // -----------------------------
+    const response = await axios.post(
+      url,
+      { item }, // or the structure your Rails controller expects
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    // -----------------------------
+    // UPDATE UI
+    // -----------------------------
+    const newItem = response.data;
+
+    const updated = [...healthItems, newItem];
     setHealthItems(updated);
+
+    localStorage.setItem("catpet_health", JSON.stringify(updated));
+
     setModal(null);
     showNotif("Item adicionado!", "Categoria: " + item.category);
-  };
+
+  } catch (error) {
+    console.log("ADD HEALTH ITEM ERROR:", error);
+    showNotif("Erro", error.response?.data?.error || "Não foi possível salvar o item");
+  }
+};
+
 
 
 
@@ -727,138 +772,103 @@ function BottomNav({ section, onChange }) {
 
 
 function AddHealthModal({ onClose, onAdd }) {
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category: "alimentacao"
+  });
 
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("alimentação");
-  const [desc, setDesc] = useState("");
-
-  const submit = (e) => {
-    e.preventDefault();
-
-    if (!title.trim()) return;
-
-    onAdd({
-      title,
-      desc,
-      category
+  const update = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
     });
   };
 
+  const save = (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+
+    onAdd(form);
+  };
+
   return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.7)",
-      backdropFilter: "blur(6px)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 50,
-      padding: "20px"
-    }}>
-      
+    <div style={styles.modal}>
       <div style={{
-        background: "rgba(30, 41, 59, 0.95)",
+        background: "#1e293b",
         borderRadius: "20px",
-        padding: "30px",
-        width: "100%",
-        maxWidth: "380px",
-        border: "1px solid rgba(148, 163, 184, 0.3)",
-        animation: "scaleIn 0.2s ease"
+        padding: "24px",
+        width: "90%",
+        maxWidth: "400px",
+        border: "1px solid rgba(148,163,184,0.3)"
       }}>
-        
-        <h2 style={{ color: "#fff", marginBottom: "20px", textAlign: "center" }}>
-          ➕ Novo Registro de Saúde
-        </h2>
 
-        <form onSubmit={submit}>
+        <h2 style={{ color: "white", marginBottom: "20px" }}>Adicionar Item de Saúde</h2>
 
-          <input
-            placeholder="Título do item"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{
-              ...styles.input,
-              width: "100%"
-            }}
-          />
+        {/* TÍTULO */}
+        <input
+          name="title"
+          placeholder="Título"
+          value={form.title}
+          onChange={update}
+          style={styles.input}
+        />
 
-          <textarea
-            placeholder="Descrição (opcional)"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            style={{
-              width: "100%",
-              height: "100px",
-              padding: "12px",
-              background: "#334155",
-              border: "2px solid #475569",
-              borderRadius: "12px",
-              color: "white",
-              fontSize: "16px",
-              marginBottom: "15px",
-              resize: "none"
-            }}
-          />
+        {/* DESCRIÇÃO */}
+        <textarea
+          name="description"
+          placeholder="Descrição"
+          value={form.description}
+          onChange={update}
+          style={{ ...styles.input, height: "90px", resize: "none" }}
+        />
 
-          <label style={{ color: "#cbd5e1", marginBottom: "8px", display: "block" }}>
-            Categoria
-          </label>
+        {/* CATEGORIA */}
+        <select
+          name="category"
+          value={form.category}
+          onChange={update}
+          style={{
+            ...styles.input,
+            width: "100%",
+            cursor: "pointer",
+            background: "#334155",
+            color: "white"
+          }}
+        >
+          <option value="alimentacao">🍎 Alimentação</option>
+          <option value="registros">📘 Registros</option>
+          <option value="consultas">👨‍⚕️ Consultas</option>
+        </select>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              background: "#334155",
-              border: "2px solid #475569",
-              borderRadius: "12px",
-              color: "white",
-              fontSize: "16px",
-              marginBottom: "20px",
-              cursor: "pointer"
-            }}
-          >
-            <option value="alimentação">🍖 Alimentação</option>
-            <option value="registros">📋 Registros</option>
-            <option value="consultas">👨‍⚕️ Consultas</option>
-          </select>
-
+        {/* BOTÕES */}
+        <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
           <button
-            type="submit"
-            style={{
-              ...styles.button,
-              width: "100%",
-              marginBottom: "10px"
-            }}
-          >
-            Adicionar
-          </button>
-
-          <button
-            type="button"
             onClick={onClose}
             style={{
-              width: "100%",
-              padding: "12px",
+              ...styles.button,
               background: "#475569",
-              borderRadius: "12px",
-              color: "white",
-              cursor: "pointer",
-              border: "none",
-              fontWeight: "bold"
+              flex: 1
             }}
           >
             Cancelar
           </button>
 
-        </form>
-
+          <button
+            onClick={save}
+            style={{
+              ...styles.button,
+              flex: 1
+            }}
+          >
+            Adicionar
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
 
 
 
