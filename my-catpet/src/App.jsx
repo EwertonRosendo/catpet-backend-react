@@ -31,6 +31,7 @@ const specieEmojis = {
 
 export default function App() {
 
+  const [healthItems, setHealthItems] = useState([]);
   const [isAuth, setIsAuth] = useState(false);
   const [user, setUser] = useState(null);
   const [section, setSection] = useState('home');
@@ -65,6 +66,15 @@ export default function App() {
   });
 
 
+  const addHealthItem = (item) => {
+    const updated = [...healthItems, { id: Date.now(), ...item }];
+    setHealthItems(updated);
+    setModal(null);
+    showNotif("Item adicionado!", "Categoria: " + item.category);
+  };
+
+
+
   const getPets = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("catpet_user"));
@@ -80,7 +90,7 @@ export default function App() {
 
       // 2. Fetch latest pets from backend
       const response = await axios.get(
-        `http://52.72.103.241:3000/users/${user.id}/pets`,
+        `https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/users/${user.id}/pets`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -103,7 +113,7 @@ export default function App() {
 
   const handleRegister = async (data) => {
     try {
-      const res = await axios.post("http://52.72.103.241:3000/signup", { user: data });
+      const res = await axios.post("https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/signup", { user: data });
 
       const newUser = res.data.user;
       const token = res.data.token;
@@ -132,7 +142,7 @@ export default function App() {
 
   const login = async (email, pass) => {
     try {
-      const response = await axios.post("http://52.72.103.241:3000/login", {
+      const response = await axios.post("https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/login", {
         email: email,
         password: pass
       });
@@ -186,7 +196,7 @@ export default function App() {
 
       // enviar request
       const response = await axios.post(
-        `http://52.72.103.241:3000/users/${user.id}/pets`,
+        `https://turbo-waffle-gwj7px5x6gghvr76-3000.app.github.dev/users/${user.id}/pets`,
         body,
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -251,7 +261,7 @@ export default function App() {
         <div style={{ paddingBottom: '100px', padding: '20px' }}>
           {section === 'home' && <Home stats={stats} pets={pets} />}
           {section === 'pets' && <Pets pets={pets} onAdd={() => setModal('pet')} />}
-          {section === 'health' && <Health />}
+          {section === 'health' && <Health onAdd={() => setModal('health')} />}
           {section === 'quest' && <Quest quests={quests} onComplete={completeQuest} stats={stats} />}
           {section === 'connect' && <Connect />}
         </div>
@@ -260,6 +270,13 @@ export default function App() {
 
         {modal === 'pet' && <AddPetModal onClose={() => setModal(null)} onAdd={addPet} />}
         {notif && <Notif title={notif.title} msg={notif.msg} />}
+        {modal === 'health' && (
+          <AddHealthModal
+            onClose={() => setModal(null)}
+            onAdd={addHealthItem}
+          />
+        )}
+
       </div>
     </div>
   );
@@ -491,19 +508,53 @@ function Pets({ pets, onAdd }) {
   );
 }
 
-function Health() {
+function Health({ onAdd }) {
   const [tab, setTab] = useState('alimentacao');
 
   return (
     <div>
-      <h2 style={{ color: 'white', fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>Saúde & Cuidados</h2>
+      {/* Title + Add Button */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <h2 style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>
+          Saúde & Cuidados
+        </h2>
 
-      <div style={{ display: 'flex', gap: '8px', background: 'rgba(51, 65, 85, 0.5)', borderRadius: '12px', padding: '4px', marginBottom: '24px' }}>
+        <button
+          style={{
+            padding: "10px 14px",
+            background: "linear-gradient(135deg, #a855f7, #ec4899)",
+            borderRadius: "12px",
+            border: "none",
+            color: "white",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+          onClick={onAdd}
+        >
+          + Add
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '8px', 
+        background: 'rgba(51, 65, 85, 0.5)', 
+        borderRadius: '12px', 
+        padding: '4px', 
+        marginBottom: '24px' 
+      }}>
         <TabBtn active={tab === 'alimentacao'} onClick={() => setTab('alimentacao')}>Alimentação</TabBtn>
         <TabBtn active={tab === 'registros'} onClick={() => setTab('registros')}>Registros</TabBtn>
         <TabBtn active={tab === 'consultas'} onClick={() => setTab('consultas')}>Consultas</TabBtn>
       </div>
 
+      {/* Alimentação */}
       {tab === 'alimentacao' && (
         <div>
           <FeedItem time="08:00" meal="Café" pet="Luna - Ração 50g" />
@@ -511,6 +562,7 @@ function Health() {
         </div>
       )}
 
+      {/* Other Tabs */}
       {tab !== 'alimentacao' && (
         <div style={{ ...styles.card, textAlign: 'center', padding: '40px' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
@@ -672,6 +724,144 @@ function BottomNav({ section, onChange }) {
     </div>
   );
 }
+
+
+function AddHealthModal({ onClose, onAdd }) {
+
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("alimentação");
+  const [desc, setDesc] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+
+    if (!title.trim()) return;
+
+    onAdd({
+      title,
+      desc,
+      category
+    });
+  };
+
+  return (
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      backdropFilter: "blur(6px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 50,
+      padding: "20px"
+    }}>
+      
+      <div style={{
+        background: "rgba(30, 41, 59, 0.95)",
+        borderRadius: "20px",
+        padding: "30px",
+        width: "100%",
+        maxWidth: "380px",
+        border: "1px solid rgba(148, 163, 184, 0.3)",
+        animation: "scaleIn 0.2s ease"
+      }}>
+        
+        <h2 style={{ color: "#fff", marginBottom: "20px", textAlign: "center" }}>
+          ➕ Novo Registro de Saúde
+        </h2>
+
+        <form onSubmit={submit}>
+
+          <input
+            placeholder="Título do item"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              ...styles.input,
+              width: "100%"
+            }}
+          />
+
+          <textarea
+            placeholder="Descrição (opcional)"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            style={{
+              width: "100%",
+              height: "100px",
+              padding: "12px",
+              background: "#334155",
+              border: "2px solid #475569",
+              borderRadius: "12px",
+              color: "white",
+              fontSize: "16px",
+              marginBottom: "15px",
+              resize: "none"
+            }}
+          />
+
+          <label style={{ color: "#cbd5e1", marginBottom: "8px", display: "block" }}>
+            Categoria
+          </label>
+
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: "#334155",
+              border: "2px solid #475569",
+              borderRadius: "12px",
+              color: "white",
+              fontSize: "16px",
+              marginBottom: "20px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="alimentação">🍖 Alimentação</option>
+            <option value="registros">📋 Registros</option>
+            <option value="consultas">👨‍⚕️ Consultas</option>
+          </select>
+
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              width: "100%",
+              marginBottom: "10px"
+            }}
+          >
+            Adicionar
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: "#475569",
+              borderRadius: "12px",
+              color: "white",
+              cursor: "pointer",
+              border: "none",
+              fontWeight: "bold"
+            }}
+          >
+            Cancelar
+          </button>
+
+        </form>
+
+      </div>
+    </div>
+  );
+}
+
+
+
 
 function AddPetModal({ onClose, onAdd }) {
   const [form, setForm] = useState({
