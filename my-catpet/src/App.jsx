@@ -65,57 +65,91 @@ export default function App() {
     }
   });
 
-
-const addHealthItem = async (item) => {
-  try {
-    const user = JSON.parse(localStorage.getItem("catpet_user"));
-    const token = localStorage.getItem("catpet_token");
-
-    if (!user || !token) {
-      showNotif("Erro", "Usuário não autenticado");
-      return;
+  const [alimentacoes, setAlimentacoes] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_alimentacoes");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
+  });
 
-    // -----------------------------
-    // MAP CATEGORIES TO ENDPOINTS
-    // -----------------------------
-    const endpoints = {
-      alimentacao: `/users/${user.id}/alimentacao`,
-      registros: `/users/${user.id}/registros`,
-      consultas: `/users/${user.id}/consultas`
-    };
+  const [registros, setRegistros] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_registros");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-    const url = `http://52.72.103.241:3000${endpoints[item.category]}`;
+  const [consultas, setConsultas] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_consultas");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-    // -----------------------------
-    // SEND REQUEST
-    // -----------------------------
-    const response = await axios.post(
-      url,
-      { item }, // or the structure your Rails controller expects
-      {
-        headers: { Authorization: `Bearer ${token}` }
+
+
+  const addHealthItem = async (item) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("catpet_user"));
+      const token = localStorage.getItem("catpet_token");
+
+      if (!user || !token) {
+        showNotif("Erro", "Usuário não autenticado");
+        return;
       }
-    );
+      console.log(item)
+      const body = {
+        title: item.title,
+        description: item.description
+      }
+      console.log(body)
 
-    // -----------------------------
-    // UPDATE UI
-    // -----------------------------
-    const newItem = response.data;
+      // -----------------------------
+      // MAP CATEGORIES TO ENDPOINTS
+      // -----------------------------
+      const endpoints = {
+        alimentacao: `/users/${user.id}/alimentacoes`,
+        registros: `/users/${user.id}/registros`,
+        consultas: `/users/${user.id}/consultas`
+      };
 
-    const updated = [...healthItems, newItem];
-    setHealthItems(updated);
+      const url = `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/${endpoints[item.category]}`;
 
-    localStorage.setItem("catpet_health", JSON.stringify(updated));
+      // -----------------------------
+      // SEND REQUEST
+      // -----------------------------
+      const response = await axios.post(
+        url,
+        { body }, // or the structure your Rails controller expects
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
 
-    setModal(null);
-    showNotif("Item adicionado!", "Categoria: " + item.category);
+      // -----------------------------
+      // UPDATE UI
+      // -----------------------------
+      const newItem = response.data;
 
-  } catch (error) {
-    console.log("ADD HEALTH ITEM ERROR:", error);
-    showNotif("Erro", error.response?.data?.error || "Não foi possível salvar o item");
-  }
-};
+      const updated = [...healthItems, newItem];
+      setHealthItems(updated);
+
+      localStorage.setItem("catpet_health", JSON.stringify(updated));
+
+      setModal(null);
+      showNotif("Item adicionado!", "Categoria: " + item.category);
+
+    } catch (error) {
+      console.log("ADD HEALTH ITEM ERROR:", error);
+      showNotif("Erro", error.response?.data?.error || "Não foi possível salvar o item");
+    }
+  };
 
 
 
@@ -135,7 +169,7 @@ const addHealthItem = async (item) => {
 
       // 2. Fetch latest pets from backend
       const response = await axios.get(
-        `http://52.72.103.241:3000/users/${user.id}/pets`,
+        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/pets`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -154,11 +188,111 @@ const addHealthItem = async (item) => {
     }
   };
 
+  const getAlimentacoes = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("catpet_user"));
+      const token = localStorage.getItem("catpet_token");
+
+      if (!user || !token) return;
+
+      // 1. Cache
+      const cached = localStorage.getItem("catpet_alimentacoes");
+      if (cached) setAlimentacoes(JSON.parse(cached));
+
+      // 2. Request Backend
+      const response = await axios.get(
+        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/alimentacoes`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const list = response.data;
+
+      // 3. Update state
+      setAlimentacoes(list);
+
+      // 4. Save cache
+      localStorage.setItem("catpet_alimentacoes", JSON.stringify(list));
+
+    } catch (error) {
+      console.error("GET ALIMENTAÇÕES ERROR:", error);
+    }
+  };
+
+
+  const getRegistros = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("catpet_user"));
+      const token = localStorage.getItem("catpet_token");
+
+      if (!user || !token) return;
+
+      // 1. Cache
+      const cached = localStorage.getItem("catpet_registros");
+      if (cached) setRegistros(JSON.parse(cached));
+
+      // 2. Request Backend
+      const response = await axios.get(
+        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/registros`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const list = response.data;
+
+      // 3. Update state
+      setRegistros(list);
+
+      // 4. Save cache
+      localStorage.setItem("catpet_registros", JSON.stringify(list));
+
+    } catch (error) {
+      console.error("GET REGISTROS ERROR:", error);
+    }
+  };
+
+
+
+  const getConsultas = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("catpet_user"));
+      const token = localStorage.getItem("catpet_token");
+
+      if (!user || !token) return;
+
+      // 1. Cache
+      const cached = localStorage.getItem("catpet_consultas");
+      if (cached) setConsultas(JSON.parse(cached));
+
+      // 2. Request Backend
+      const response = await axios.get(
+        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/consultas`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const list = response.data;
+
+      // 3. Update state
+      setConsultas(list);
+
+      // 4. Save cache
+      localStorage.setItem("catpet_consultas", JSON.stringify(list));
+
+    } catch (error) {
+      console.error("GET CONSULTAS ERROR:", error);
+    }
+  };
+
+
 
 
   const handleRegister = async (data) => {
     try {
-      const res = await axios.post("http://52.72.103.241:3000/signup", { user: data });
+      const res = await axios.post("https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/signup", { user: data });
 
       const newUser = res.data.user;
       const token = res.data.token;
@@ -174,6 +308,9 @@ const addHealthItem = async (item) => {
       // Redirect to dashboard
       setSection("home");
       getPets()
+      getAlimentacoes()
+      getConsultas()
+      getRegistros()
       return true;
     } catch (err) {
       console.error(err);
@@ -187,7 +324,7 @@ const addHealthItem = async (item) => {
 
   const login = async (email, pass) => {
     try {
-      const response = await axios.post("http://52.72.103.241:3000/login", {
+      const response = await axios.post("https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/login", {
         email: email,
         password: pass
       });
@@ -203,6 +340,9 @@ const addHealthItem = async (item) => {
       localStorage.setItem("catpet_user", JSON.stringify(user));
       localStorage.setItem("catpet_token", token);
       getPets()
+      getAlimentacoes()
+      getConsultas()
+      getRegistros()
       return true;
     } catch (error) {
       console.log("LOGIN ERROR:", error);
@@ -241,7 +381,7 @@ const addHealthItem = async (item) => {
 
       // enviar request
       const response = await axios.post(
-        `http://52.72.103.241:3000/users/${user.id}/pets`,
+        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/pets`,
         body,
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -553,15 +693,45 @@ function Pets({ pets, onAdd }) {
   );
 }
 
-function Health({ onAdd }) {
-  const [tab, setTab] = useState('alimentacao');
+function Health({
+  onAdd,
+}) {
+  const [tab, setTab] = useState("alimentacao");
+  const [alimentacoes, setAlimentacoes] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_alimentacoes");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Registros
+  const [registros, setRegistros] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_registros");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Consultas
+  const [consultas, setConsultas] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_consultas");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   return (
     <div>
       {/* Title + Add Button */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px'
       }}>
@@ -586,37 +756,72 @@ function Health({ onAdd }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '8px', 
-        background: 'rgba(51, 65, 85, 0.5)', 
-        borderRadius: '12px', 
-        padding: '4px', 
-        marginBottom: '24px' 
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        background: 'rgba(51, 65, 85, 0.5)',
+        borderRadius: '12px',
+        padding: '4px',
+        marginBottom: '24px'
       }}>
         <TabBtn active={tab === 'alimentacao'} onClick={() => setTab('alimentacao')}>Alimentação</TabBtn>
         <TabBtn active={tab === 'registros'} onClick={() => setTab('registros')}>Registros</TabBtn>
         <TabBtn active={tab === 'consultas'} onClick={() => setTab('consultas')}>Consultas</TabBtn>
       </div>
 
-      {/* Alimentação */}
-      {tab === 'alimentacao' && (
+      {/* ALIMENTAÇÃO */}
+      {tab === "alimentacao" && (
         <div>
-          <FeedItem time="08:00" meal="Café" pet="Luna - Ração 50g" />
-          <FeedItem time="18:00" meal="Jantar" pet="Rex - Ração + suplemento" />
+          {alimentacoes.length === 0 ? (
+            <></>
+          ) : (
+            alimentacoes.map((item) => (
+              <FeedItem
+                key={item.id}
+                time={item.created_at || ""}
+                meal={item.title}
+                pet={item.description}
+              />
+            ))
+          )}
         </div>
       )}
 
-      {/* Other Tabs */}
-      {tab !== 'alimentacao' && (
-        <div style={{ ...styles.card, textAlign: 'center', padding: '40px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-          <p style={{ color: '#94a3b8' }}>Nenhum item encontrado</p>
+      {/* REGISTROS */}
+      {tab === "registros" && (
+        <div>
+          {registros.length === 0 ? (
+            <></>
+          ) : (
+            registros.map((item) => (
+              <div key={item.id} style={{ ...styles.card, marginBottom: "12px" }}>
+                <h3 style={{ color: "white" }}>{item.title}</h3>
+                <p style={{ color: "#94a3b8" }}>{item.description}</p>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* CONSULTAS */}
+      {tab === "consultas" && (
+        <div>
+          {consultas.length === 0 ? (
+            <></>
+          ) : (
+            consultas.map((item) => (
+              <div key={item.id} style={{ ...styles.card, marginBottom: "12px" }}>
+                <h3 style={{ color: "white" }}>{item.title}</h3>
+                <p style={{ color: "#94a3b8" }}>{item.description}</p>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 function TabBtn({ active, onClick, children }) {
   return (
