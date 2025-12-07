@@ -103,16 +103,32 @@ export default function App() {
         showNotif("Erro", "Usuário não autenticado");
         return;
       }
-      console.log(item)
-      const body = {
-        title: item.title,
-        description: item.description
-      }
-      console.log(body)
 
-      // -----------------------------
-      // MAP CATEGORIES TO ENDPOINTS
-      // -----------------------------
+      let dataToSend;
+
+      // ---------------------------------------
+      // SE FOR REGISTRO -> USAR FormData + FOTOS
+      // ---------------------------------------
+      if (item.category === "registros") {
+        dataToSend = new FormData();
+        dataToSend.append("title", item.title);
+        dataToSend.append("description", item.description);
+        item.photos.forEach((file) => dataToSend.append("photo[]", file[0]));
+
+        item.photos.forEach((file, idx) => {
+          dataToSend.append(`photos[]`, file);
+        });
+
+      } else {
+        // ---------------------------------------
+        // OUTRAS CATEGORIAS — JSON normal
+        // ---------------------------------------
+        dataToSend = {
+          title: item.title,
+          description: item.description
+        };
+      }
+
       const endpoints = {
         alimentacao: `/users/${user.id}/alimentacoes`,
         registros: `/users/${user.id}/registros`,
@@ -121,26 +137,19 @@ export default function App() {
 
       const url = `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/${endpoints[item.category]}`;
 
-      // -----------------------------
-      // SEND REQUEST
-      // -----------------------------
-      const response = await axios.post(
-        url,
-        { body }, // or the structure your Rails controller expects
-        {
-          headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.post(url, dataToSend, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(item.category === "registros"
+            ? { "Content-Type": "multipart/form-data" }
+            : {})
         }
-      );
+      });
 
-      // -----------------------------
-      // UPDATE UI
-      // -----------------------------
       const newItem = response.data;
 
-      const updated = [...healthItems, newItem];
-      setHealthItems(updated);
-
-      localStorage.setItem("catpet_health", JSON.stringify(updated));
+      setHealthItems((prev) => [...prev, newItem]);
+      localStorage.setItem("catpet_health", JSON.stringify([...healthItems, newItem]));
 
       setModal(null);
       showNotif("Item adicionado!", "Categoria: " + item.category);
@@ -150,6 +159,7 @@ export default function App() {
       showNotif("Erro", error.response?.data?.error || "Não foi possível salvar o item");
     }
   };
+
 
 
 
@@ -696,6 +706,8 @@ function Pets({ pets, onAdd }) {
 function Health({
   onAdd,
 }) {
+  const user = JSON.parse(localStorage.getItem("catpet_user"));
+  const token = localStorage.getItem("catpet_token");
   const [tab, setTab] = useState("alimentacao");
   const [alimentacoes, setAlimentacoes] = useState(() => {
     try {
@@ -977,102 +989,98 @@ function BottomNav({ section, onChange }) {
 
 
 function AddHealthModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    category: "alimentacao"
-  });
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("alimentacao");
+  const [photos, setPhotos] = useState([]);
 
-  const update = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
+  const handleFileChange = (e) => {
+    setPhotos([...e.target.files]);
   };
 
-  const save = (e) => {
-    e.preventDefault();
-    if (!form.title.trim()) return;
+  const handleSubmit = () => {
+    if (!title.trim() || !description.trim()) return;
 
-    onAdd(form);
+    const item = {
+      title,
+      description,
+      category,
+      photos
+    };
+
+    onAdd(item);
   };
 
   return (
     <div style={styles.modal}>
-      <div style={{
-        background: "#1e293b",
-        borderRadius: "20px",
-        padding: "24px",
-        width: "90%",
-        maxWidth: "400px",
-        border: "1px solid rgba(148,163,184,0.3)"
-      }}>
+      <div style={{ background: "#1e293b", padding: "20px", borderRadius: "16px", width: "360px" }}>
+        <h2 style={{ color: "white", marginBottom: "16px" }}>Adicionar Item</h2>
 
-        <h2 style={{ color: "white", marginBottom: "20px" }}>Adicionar Item de Saúde</h2>
-
-        {/* TÍTULO */}
+        {/* Título */}
         <input
-          name="title"
           placeholder="Título"
-          value={form.title}
-          onChange={update}
           style={styles.input}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
         />
 
-        {/* DESCRIÇÃO */}
-        <textarea
-          name="description"
+        {/* Descrição */}
+        <input
           placeholder="Descrição"
-          value={form.description}
-          onChange={update}
-          style={{ ...styles.input, height: "90px", resize: "none" }}
+          style={styles.input}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
         />
 
-        {/* CATEGORIA */}
+        {/* Categoria */}
         <select
-          name="category"
-          value={form.category}
-          onChange={update}
-          style={{
-            ...styles.input,
-            width: "100%",
-            cursor: "pointer",
-            background: "#334155",
-            color: "white"
-          }}
+          style={{ ...styles.input, width: "100%" }}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="alimentacao">🍎 Alimentação</option>
-          <option value="registros">📘 Registros</option>
-          <option value="consultas">👨‍⚕️ Consultas</option>
+          <option value="alimentacao">Alimentação</option>
+          <option value="registros">Registros</option>
+          <option value="consultas">Consultas</option>
         </select>
 
-        {/* BOTÕES */}
-        <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+        {/* Campo de upload de fotos — APENAS PARA REGISTROS */}
+        {category === "registros" && (
+          <div style={{ marginTop: "10px" }}>
+            <label style={{ color: "white", marginBottom: "6px", display: "block" }}>
+              Anexar Fotos:
+            </label>
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              style={{ color: "white" }}
+            />
+
+            {photos.length > 0 && (
+              <p style={{ color: "#a855f7", marginTop: "5px" }}>
+                {photos.length} foto(s) selecionada(s)
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Botões */}
+        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+          <button style={styles.button} onClick={handleSubmit}>Salvar</button>
           <button
+            style={{ ...styles.button, background: "#475569" }}
             onClick={onClose}
-            style={{
-              ...styles.button,
-              background: "#475569",
-              flex: 1
-            }}
           >
             Cancelar
-          </button>
-
-          <button
-            onClick={save}
-            style={{
-              ...styles.button,
-              flex: 1
-            }}
-          >
-            Adicionar
           </button>
         </div>
       </div>
     </div>
   );
 }
+
 
 
 
