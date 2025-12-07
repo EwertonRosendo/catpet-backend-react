@@ -924,7 +924,7 @@ function FeedItem({ time, meal, pet }) {
 
 function Quest({ onComplete, stats }) {
   const [tab, setTab] = useState('ativas');
-
+  const user = JSON.parse(localStorage.getItem("catpet_user"));
   // Carregar quests do localStorage
   const [quests, setQuests] = useState(() => {
     try {
@@ -943,13 +943,22 @@ function Quest({ onComplete, stats }) {
     }
   });
 
+  // Carregar quests completadas do localStorage
+  const [completedQuests, setCompletedQuests] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_quests_completed");
+      if (!saved) return [];
+      return JSON.parse(saved);
+    } catch {
+      return [];
+    }
+  });
 
-  // Atualiza quests ao montar (caso venham do backend também)
+  // Atualiza quests ao montar
   useEffect(() => {
     const saved = localStorage.getItem("catpet_quests");
     if (saved) {
       const parsed = JSON.parse(saved);
-
       setQuests(parsed.map(q => ({
         ...q,
         active: q.active ?? true,
@@ -957,9 +966,38 @@ function Quest({ onComplete, stats }) {
     }
   }, []);
 
+  // Atualiza completedQuests ao montar
+  useEffect(() => {
+    const saved = localStorage.getItem("catpet_quests_completed");
+    if (saved) {
+      setCompletedQuests(JSON.parse(saved));
+    }
+  }, []);
 
-  // Separar quests
-  const active = quests
+  // Buscar completadas do backend
+  useEffect(() => {
+    async function fetchCompleted() {
+      try {
+        const res = await fetch(
+          `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/user_task_completeds?user_id=${user.id}`
+        );
+
+        const data = await res.json();
+
+        // salvar no localStorage
+        localStorage.setItem("catpet_quests_completed", JSON.stringify(data));
+        setCompletedQuests(data);
+
+      } catch (err) {
+        console.error("Erro ao buscar completadas:", err);
+      }
+    }
+
+    fetchCompleted();
+  }, [stats.user_id]);
+
+  // Separar quests (não alterar)
+  const active = quests;
   const completed = quests.filter(q => !q.active);
 
   return (
@@ -979,167 +1017,161 @@ function Quest({ onComplete, stats }) {
           <span style={{ color: 'white', fontWeight: '500' }}>Nível {stats.level}</span>
           <span style={{ color: '#94a3b8', fontSize: '14px' }}>{stats.xp % 100}/100 XP</span>
         </div>
-        <div style={{ width: '100%', height: '12px', background: '#475569', borderRadius: '6px', overflow: 'hidden' }}>
-          <div style={{ width: `${stats.xp % 100}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #059669)', transition: 'width 0.5s' }} />
+        <div style={{
+          width: '100%', height: '12px', background: '#475569', borderRadius: '6px', overflow: 'hidden'
+        }}>
+          <div style={{
+            width: `${stats.xp % 100}%`,
+            height: '100%',
+            background: 'linear-gradient(90deg, #10b981, #059669)',
+            transition: 'width 0.5s'
+          }} />
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', background: 'rgba(51, 65, 85, 0.5)', borderRadius: '12px', padding: '4px', marginBottom: '24px' }}>
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        background: 'rgba(51, 65, 85, 0.5)',
+        borderRadius: '12px',
+        padding: '4px',
+        marginBottom: '24px'
+      }}>
         <TabBtn active={tab === 'ativas'} onClick={() => setTab('ativas')}>Ativas</TabBtn>
         <TabBtn active={tab === 'completas'} onClick={() => setTab('completas')}>Completas</TabBtn>
       </div>
 
-      {/* Quests Ativas */}
+      {/* Quests Ativas — NÃO MEXI EM NADA */}
       {tab === 'ativas' && active.map(quest => {
-  const completed = !quest.active;
+        const completed = !quest.active;
 
-  return (
-    <div
-      key={quest.id}
-      onClick={() => !completed && onComplete(quest.id)}
-      style={{
-        ...styles.card,
-        border: completed
-          ? '1px solid rgba(16, 185, 129, 0.5)'
-          : '1px solid rgba(100, 116, 139, 0.3)',
-        opacity: completed ? 0.7 : 1,
-        display: 'flex',
-        gap: '16px'
-      }}
-    >
-      <div
-        style={{
-          width: '48px',
-          height: '48px',
-          background: completed
-            ? '#10b981'
-            : 'linear-gradient(135deg, #a855f7, #ec4899)',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '24px'
-        }}
-      >
-        {completed ? '✓' : '🏆'}
-      </div>
+        return (
+          <div
+            key={quest.id}
+            onClick={() => !completed && onComplete(quest.id)}
+            style={{
+              ...styles.card,
+              border: completed
+                ? '1px solid rgba(16, 185, 129, 0.5)'
+                : '1px solid rgba(100, 116, 139, 0.3)',
+              opacity: completed ? 0.7 : 1,
+              display: 'flex',
+              gap: '16px'
+            }}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                background: completed
+                  ? '#10b981'
+                  : 'linear-gradient(135deg, #a855f7, #ec4899)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px'
+              }}
+            >
+              {completed ? '✓' : '🏆'}
+            </div>
 
-      <div style={{ flex: 1 }}>
-        <h3 style={{
-          color: 'white',
-          fontWeight: 'bold',
-          margin: 0,
-          marginBottom: '4px'
-        }}>
-          {quest.name}
-        </h3>
+            <div style={{ flex: 1 }}>
+              <h3 style={{
+                color: 'white',
+                fontWeight: 'bold',
+                margin: 0,
+                marginBottom: '4px'
+              }}>
+                {quest.name}
+              </h3>
 
-        <p style={{
-          color: '#94a3b8',
-          fontSize: '14px',
-          margin: 0,
-          marginBottom: '12px'
-        }}>
-          {quest.description}
-        </p>
+              <p style={{
+                color: '#94a3b8',
+                fontSize: '14px',
+                margin: 0,
+                marginBottom: '12px'
+              }}>
+                {quest.description}
+              </p>
 
-        <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-          <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
+              <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
+                <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
 
-          {!completed && (
-            <span style={{ color: '#94a3b8' }}>
-              0 / {quest.times}
-            </span>
-          )}
+                {!completed && (
+                  <span style={{ color: '#94a3b8' }}>
+                    0 / {quest.times}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {completed && (
+              <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Quests Completas — ATUALIZADO */}
+      {tab === 'completas' && completedQuests.map(quest => (
+        <div
+          key={quest.id}
+          style={{
+            ...styles.card,
+            border: '1px solid rgba(16, 185, 129, 0.5)',
+            opacity: 0.7,
+            display: 'flex',
+            gap: '16px'
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              background: '#10b981',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px'
+            }}
+          >
+            ✓
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <h3 style={{
+              color: 'white',
+              fontWeight: 'bold',
+              margin: 0,
+              marginBottom: '4px'
+            }}>
+              {quest.name}
+            </h3>
+
+            <p style={{
+              color: '#94a3b8',
+              fontSize: '14px',
+              margin: 0,
+              marginBottom: '12px'
+            }}>
+              {quest.description}
+            </p>
+
+            <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
+          </div>
+
+          <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>
         </div>
-      </div>
-
-      {completed && (
-        <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>
-      )}
-    </div>
-  );
-})}
-
-
-      {/* Quests Completas */}
-      {tab === 'completas' && completed.map(quest => (
-  <div
-    key={quest.id}
-    style={{
-      ...styles.card,
-      border: '1px solid rgba(16, 185, 129, 0.5)',
-      opacity: 0.6,
-      display: 'flex',
-      gap: '16px'
-    }}
-  >
-    <div
-      style={{
-        width: '48px',
-        height: '48px',
-        background: '#10b981',
-        borderRadius: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '24px'
-      }}
-    >
-      ✓
-    </div>
-
-    <div style={{ flex: 1 }}>
-      <h3 style={{
-        color: 'white',
-        fontWeight: 'bold',
-        margin: 0,
-        marginBottom: '4px'
-      }}>
-        {quest.name}
-      </h3>
-
-      <p style={{
-        color: '#94a3b8',
-        fontSize: '14px',
-        margin: 0,
-        marginBottom: '12px'
-      }}>
-        {quest.description}
-      </p>
-
-      <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
-    </div>
-
-    <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>
-  </div>
-))}
+      ))}
 
     </div>
   );
 }
 
 
-function QuestCard({ quest, onComplete, completed }) {
-  console.log(quest.title)
-  return (
-    <div onClick={() => !completed && onComplete(quest.id)} style={{ ...styles.card, border: completed ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(100, 116, 139, 0.3)', opacity: completed ? 0.7 : 1, display: 'flex', gap: '16px' }}>
-      <div style={{ width: '48px', height: '48px', background: completed ? '#10b981' : 'linear-gradient(135deg, #a855f7, #ec4899)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-        {completed ? '✓' : '🏆'}
-      </div>
-      <div style={{ flex: 1 }}>
-        <h3 style={{ color: 'white', fontWeight: 'bold', margin: 0, marginBottom: '4px' }}>{quest.title}</h3>
-        <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0, marginBottom: '12px' }}>{quest.desc}</p>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-          <span style={{ color: '#10b981' }}>+{quest.xp} XP porra</span>
-          {!completed && <span style={{ color: '#94a3b8' }}>{quest.progress}/{quest.total}</span>}
-        </div>
-      </div>
-      {completed && <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>}
-    </div>
-  );
-}
 
 function Connect() {
   const [doctors, setDoctors] = useState([]);
