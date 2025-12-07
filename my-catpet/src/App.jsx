@@ -1157,7 +1157,7 @@ function Connect() {
 
       const list = response.data.map(doc => ({
         ...doc,
-        status: Math.random() > 0.5 ? "online" : "busy" // geramos só para UI
+        status: Math.random() > 0.5 ? "online" : "busy"
       }));
 
       setDoctors(list);
@@ -1171,6 +1171,12 @@ function Connect() {
   useEffect(() => {
     getDoctors();
   }, []);
+
+  const openWhatsApp = (phone) => {
+    if (!phone) return;
+    const clean = phone.replace(/\D/g, ""); // remove qualquer símbolo
+    window.open(`https://api.whatsapp.com/send/?phone=55${clean}`, "_blank");
+  };
 
   return (
     <div>
@@ -1200,12 +1206,18 @@ function Connect() {
 
       {/* Lista */}
       {doctors.map(doc => (
-        <div key={doc.id} style={{
-          ...styles.card,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px'
-        }}>
+        <div
+          key={doc.id}
+          onClick={() => openWhatsApp(doc.phone)}
+          style={{
+            ...styles.card,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            cursor: 'pointer',
+            transition: '0.2s',
+          }}
+        >
           {/* Avatar */}
           <div style={{ position: 'relative' }}>
             <div style={{
@@ -1276,7 +1288,7 @@ function Connect() {
               cursor: 'pointer',
               marginBottom: '4px'
             }}>
-              {doc.status === 'online' ? '📹' : '📅'}
+              💬
             </button>
 
             <p style={{
