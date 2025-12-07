@@ -1049,7 +1049,7 @@ function Quest({ onComplete, stats }) {
         return (
           <div
             key={quest.id}
-            onClick={() => !completed && onComplete(quest.id)}
+            onClick={() => !completed && handleCompleteQuest(quest.id)}
             style={{
               ...styles.card,
               border: completed
@@ -1169,6 +1169,54 @@ function Quest({ onComplete, stats }) {
 
     </div>
   );
+}
+
+
+// --- FUNÇÃO ATUALIZADA PARA COMPLETAR QUEST ---
+async function handleCompleteQuest(questId) {
+  try {
+    const user = JSON.parse(localStorage.getItem("catpet_user"));
+    const body = {
+      quest_id: questId,
+      user_id: user.id,
+    };
+
+    const res = await fetch(
+      "https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/user_task_completeds",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    const saved = await res.json();
+
+    // Atualiza localStorage
+    const newCompleted = [...completedQuests, saved];
+    localStorage.setItem(
+      "catpet_quests_completed",
+      JSON.stringify(newCompleted)
+    );
+    setCompletedQuests(newCompleted);
+
+    // Marca quest como inativa no localStorage
+    const updatedQuests = quests.map((q) =>
+      q.id === questId ? { ...q, active: false } : q
+    );
+
+    localStorage.setItem("catpet_quests", JSON.stringify(updatedQuests));
+    setQuests(updatedQuests);
+
+    // Chama lógica externa (XP, level etc.)
+    if (onComplete) {
+      onComplete(questId);
+    }
+  } catch (err) {
+    console.error("Erro ao completar quest:", err);
+  }
 }
 
 
