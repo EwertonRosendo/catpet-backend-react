@@ -135,7 +135,7 @@ export default function App() {
         consultas: `/users/${user.id}/consultas`
       };
 
-      const url = `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/${endpoints[item.category]}`;
+      const url = `http://52.72.103.241:3000/${endpoints[item.category]}`;
 
       const response = await axios.post(url, dataToSend, {
         headers: {
@@ -179,7 +179,7 @@ export default function App() {
 
       // 2. Fetch latest pets from backend
       const response = await axios.get(
-        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/pets`,
+        `http://52.72.103.241:3000/users/${user.id}/pets`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -213,7 +213,7 @@ export default function App() {
 
       // 2. Fetch latest quests from backend
       const response = await axios.get(
-        "https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/quests",
+        "http://52.72.103.241:3000/quests",
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -246,7 +246,7 @@ export default function App() {
 
       // 2. Request Backend
       const response = await axios.get(
-        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/alimentacoes`,
+        `http://52.72.103.241:3000/users/${user.id}/alimentacoes`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -279,7 +279,7 @@ export default function App() {
 
       // 2. Request Backend
       const response = await axios.get(
-        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/registros`,
+        `http://52.72.103.241:3000/users/${user.id}/registros`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -313,7 +313,7 @@ export default function App() {
 
       // 2. Request Backend
       const response = await axios.get(
-        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/consultas`,
+        `http://52.72.103.241:3000/users/${user.id}/consultas`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -337,7 +337,7 @@ export default function App() {
 
   const handleRegister = async (data) => {
     try {
-      const res = await axios.post("https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/signup", { user: data });
+      const res = await axios.post("http://52.72.103.241:3000/signup", { user: data });
 
       const newUser = res.data.user;
       const token = res.data.token;
@@ -370,7 +370,7 @@ export default function App() {
 
   const login = async (email, pass) => {
     try {
-      const response = await axios.post("https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/login", {
+      const response = await axios.post("http://52.72.103.241:3000/login", {
         email: email,
         password: pass
       });
@@ -428,7 +428,7 @@ export default function App() {
 
       // enviar request
       const response = await axios.post(
-        `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/users/${user.id}/pets`,
+        `http://52.72.103.241:3000/users/${user.id}/pets`,
         body,
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -979,7 +979,7 @@ function Quest({ onComplete, stats }) {
     async function fetchCompleted() {
       try {
         const res = await fetch(
-          `https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/user_task_completeds?user_id=${user.id}`
+          `http://52.72.103.241:3000/user_task_completeds?user_id=${user.id}`
         );
 
         const data = await res.json();
@@ -1182,7 +1182,7 @@ async function handleCompleteQuest(questId) {
     };
 
     const res = await fetch(
-      "https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/user_task_completeds",
+      "http://52.72.103.241:3000/user_task_completeds",
       {
         method: "POST",
         headers: {
@@ -1232,7 +1232,7 @@ function Connect() {
       }
 
       const response = await axios.get(
-        "https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/doctors"
+        "http://52.72.103.241:3000/doctors"
       );
 
       const list = response.data.map(doc => ({
