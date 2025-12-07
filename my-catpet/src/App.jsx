@@ -198,6 +198,41 @@ export default function App() {
     }
   };
 
+
+  const getQuests = async () => {
+    try {
+      const token = localStorage.getItem("catpet_token");
+
+      if (!token) return;
+
+      // 1. Load cached quests (UI rápida)
+      const cachedQuests = localStorage.getItem("catpet_quests");
+      if (cachedQuests) {
+        setQuests(JSON.parse(cachedQuests));
+      }
+
+      // 2. Fetch latest quests from backend
+      const response = await axios.get(
+        "https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/quests",
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const questsList = response.data;
+
+      // 3. Save new quests to state
+      setQuests(questsList);
+
+      // 4. Save to localStorage
+      localStorage.setItem("catpet_quests", JSON.stringify(questsList));
+
+    } catch (error) {
+      console.error("GET QUESTS ERROR:", error);
+    }
+  };
+
+
   const getAlimentacoes = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("catpet_user"));
@@ -251,7 +286,7 @@ export default function App() {
       );
 
       const list = response.data;
-
+      console.log(list)
       // 3. Update state
       setRegistros(list);
 
@@ -318,6 +353,7 @@ export default function App() {
       // Redirect to dashboard
       setSection("home");
       getPets()
+      getQuests()
       getAlimentacoes()
       getConsultas()
       getRegistros()
@@ -350,6 +386,7 @@ export default function App() {
       localStorage.setItem("catpet_user", JSON.stringify(user));
       localStorage.setItem("catpet_token", token);
       getPets()
+      getQuests()
       getAlimentacoes()
       getConsultas()
       getRegistros()
@@ -806,14 +843,39 @@ function Health({
             <></>
           ) : (
             registros.map((item) => (
-              <div key={item.id} style={{ ...styles.card, marginBottom: "12px" }}>
-                <h3 style={{ color: "white" }}>{item.title}</h3>
-                <p style={{ color: "#94a3b8" }}>{item.description}</p>
+              <div
+                key={item.id}
+                style={{
+                  ...styles.card,
+                  marginBottom: "12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px"
+                }}
+              >
+                {/* Foto */}
+                {item.photo_url && (
+                  <img
+                    src={item.photo_url}
+                    alt={item.title}
+                    style={{
+                      width: "100%",
+                      height: "180px",
+                      objectFit: "cover",
+                      borderRadius: "12px"
+                    }}
+                  />
+                )}
+
+                {/* Conteúdo */}
+                <h3 style={{ color: "white", margin: 0 }}>{item.title}</h3>
+                <p style={{ color: "#94a3b8", margin: 0 }}>{item.description}</p>
               </div>
             ))
           )}
         </div>
       )}
+
 
       {/* CONSULTAS */}
       {tab === "consultas" && (
@@ -860,13 +922,49 @@ function FeedItem({ time, meal, pet }) {
   );
 }
 
-function Quest({ quests, onComplete, stats }) {
+function Quest({ onComplete, stats }) {
   const [tab, setTab] = useState('ativas');
-  const active = quests.filter(q => q.active);
+
+  // Carregar quests do localStorage
+  const [quests, setQuests] = useState(() => {
+    try {
+      const saved = localStorage.getItem("catpet_quests");
+      if (!saved) return [];
+
+      const parsed = JSON.parse(saved);
+
+      // ensure every quest has `active`
+      return parsed.map(q => ({
+        ...q,
+        active: q.active ?? true
+      }));
+    } catch {
+      return [];
+    }
+  });
+
+
+  // Atualiza quests ao montar (caso venham do backend também)
+  useEffect(() => {
+    const saved = localStorage.getItem("catpet_quests");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      setQuests(parsed.map(q => ({
+        ...q,
+        active: q.active ?? true,
+      })));
+    }
+  }, []);
+
+
+  // Separar quests
+  const active = quests
   const completed = quests.filter(q => !q.active);
 
   return (
     <div>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>PetQuest</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontWeight: 'bold' }}>
@@ -875,6 +973,7 @@ function Quest({ quests, onComplete, stats }) {
         </div>
       </div>
 
+      {/* Level bar */}
       <div style={{ ...styles.card, marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span style={{ color: 'white', fontWeight: '500' }}>Nível {stats.level}</span>
@@ -885,22 +984,145 @@ function Quest({ quests, onComplete, stats }) {
         </div>
       </div>
 
+      {/* Tabs */}
       <div style={{ display: 'flex', gap: '8px', background: 'rgba(51, 65, 85, 0.5)', borderRadius: '12px', padding: '4px', marginBottom: '24px' }}>
         <TabBtn active={tab === 'ativas'} onClick={() => setTab('ativas')}>Ativas</TabBtn>
         <TabBtn active={tab === 'completas'} onClick={() => setTab('completas')}>Completas</TabBtn>
       </div>
 
-      {tab === 'ativas' && active.map(q => (
-        <QuestCard key={q.id} quest={q} onComplete={onComplete} />
-      ))}
-      {tab === 'completas' && completed.map(q => (
-        <QuestCard key={q.id} quest={q} completed />
-      ))}
+      {/* Quests Ativas */}
+      {tab === 'ativas' && active.map(quest => {
+  const completed = !quest.active;
+
+  return (
+    <div
+      key={quest.id}
+      onClick={() => !completed && onComplete(quest.id)}
+      style={{
+        ...styles.card,
+        border: completed
+          ? '1px solid rgba(16, 185, 129, 0.5)'
+          : '1px solid rgba(100, 116, 139, 0.3)',
+        opacity: completed ? 0.7 : 1,
+        display: 'flex',
+        gap: '16px'
+      }}
+    >
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          background: completed
+            ? '#10b981'
+            : 'linear-gradient(135deg, #a855f7, #ec4899)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px'
+        }}
+      >
+        {completed ? '✓' : '🏆'}
+      </div>
+
+      <div style={{ flex: 1 }}>
+        <h3 style={{
+          color: 'white',
+          fontWeight: 'bold',
+          margin: 0,
+          marginBottom: '4px'
+        }}>
+          {quest.name}
+        </h3>
+
+        <p style={{
+          color: '#94a3b8',
+          fontSize: '14px',
+          margin: 0,
+          marginBottom: '12px'
+        }}>
+          {quest.description}
+        </p>
+
+        <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
+          <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
+
+          {!completed && (
+            <span style={{ color: '#94a3b8' }}>
+              0 / {quest.times}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {completed && (
+        <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>
+      )}
+    </div>
+  );
+})}
+
+
+      {/* Quests Completas */}
+      {tab === 'completas' && completed.map(quest => (
+  <div
+    key={quest.id}
+    style={{
+      ...styles.card,
+      border: '1px solid rgba(16, 185, 129, 0.5)',
+      opacity: 0.6,
+      display: 'flex',
+      gap: '16px'
+    }}
+  >
+    <div
+      style={{
+        width: '48px',
+        height: '48px',
+        background: '#10b981',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '24px'
+      }}
+    >
+      ✓
+    </div>
+
+    <div style={{ flex: 1 }}>
+      <h3 style={{
+        color: 'white',
+        fontWeight: 'bold',
+        margin: 0,
+        marginBottom: '4px'
+      }}>
+        {quest.name}
+      </h3>
+
+      <p style={{
+        color: '#94a3b8',
+        fontSize: '14px',
+        margin: 0,
+        marginBottom: '12px'
+      }}>
+        {quest.description}
+      </p>
+
+      <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
+    </div>
+
+    <div style={{ color: '#10b981', fontSize: '24px' }}>✓</div>
+  </div>
+))}
+
     </div>
   );
 }
 
+
 function QuestCard({ quest, onComplete, completed }) {
+  console.log(quest.title)
   return (
     <div onClick={() => !completed && onComplete(quest.id)} style={{ ...styles.card, border: completed ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(100, 116, 139, 0.3)', opacity: completed ? 0.7 : 1, display: 'flex', gap: '16px' }}>
       <div style={{ width: '48px', height: '48px', background: completed ? '#10b981' : 'linear-gradient(135deg, #a855f7, #ec4899)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
@@ -910,7 +1132,7 @@ function QuestCard({ quest, onComplete, completed }) {
         <h3 style={{ color: 'white', fontWeight: 'bold', margin: 0, marginBottom: '4px' }}>{quest.title}</h3>
         <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0, marginBottom: '12px' }}>{quest.desc}</p>
         <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-          <span style={{ color: '#10b981' }}>+{quest.xp} XP</span>
+          <span style={{ color: '#10b981' }}>+{quest.xp} XP porra</span>
           {!completed && <span style={{ color: '#94a3b8' }}>{quest.progress}/{quest.total}</span>}
         </div>
       </div>
