@@ -1142,42 +1142,150 @@ function QuestCard({ quest, onComplete, completed }) {
 }
 
 function Connect() {
-  const vets = [
-    { id: 1, name: 'Dr. Carlos Silva', spec: 'Clínica Geral', status: 'online', price: 45, rating: 4.9 },
-    { id: 2, name: 'Dra. Ana Oliveira', spec: 'Comportamento', status: 'busy', price: 55, rating: 4.8 },
-    { id: 3, name: 'Dr. Pedro Santos', spec: 'Emergências', status: 'online', price: 65, rating: 4.9 }
-  ];
+  const [doctors, setDoctors] = useState([]);
+
+  const getDoctors = async () => {
+    try {
+      const cached = localStorage.getItem("catpet_doctors");
+      if (cached) {
+        setDoctors(JSON.parse(cached));
+      }
+
+      const response = await axios.get(
+        "https://fluffy-computing-machine-94rjx6q64942pvr6-3000.app.github.dev/doctors"
+      );
+
+      const list = response.data.map(doc => ({
+        ...doc,
+        status: Math.random() > 0.5 ? "online" : "busy" // geramos só para UI
+      }));
+
+      setDoctors(list);
+      localStorage.setItem("catpet_doctors", JSON.stringify(list));
+
+    } catch (err) {
+      console.error("GET DOCTORS ERROR:", err);
+    }
+  };
+
+  useEffect(() => {
+    getDoctors();
+  }, []);
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>PetConnect</h2>
-        <button style={{ padding: '8px 16px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', cursor: 'pointer', fontSize: '14px' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '24px'
+      }}>
+        <h2 style={{ color: 'white', fontSize: '28px', fontWeight: 'bold' }}>
+          PetConnect
+        </h2>
+
+        <button style={{
+          padding: '8px 16px',
+          background: 'rgba(239, 68, 68, 0.2)',
+          color: '#ef4444',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}>
           🚨 Emergência
         </button>
       </div>
 
-      {vets.map(vet => (
-        <div key={vet.id} style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Lista */}
+      {doctors.map(doc => (
+        <div key={doc.id} style={{
+          ...styles.card,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          {/* Avatar */}
           <div style={{ position: 'relative' }}>
-            <div style={{ width: '56px', height: '56px', background: 'linear-gradient(135deg, #a855f7, #ec4899)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '28px'
+            }}>
               👨‍⚕️
             </div>
-            <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '16px', height: '16px', background: vet.status === 'online' ? '#10b981' : '#f59e0b', borderRadius: '50%', border: '2px solid #1e293b' }} />
+
+            {/* Status */}
+            <div style={{
+              position: 'absolute',
+              bottom: '-4px',
+              right: '-4px',
+              width: '16px',
+              height: '16px',
+              background: doc.status === 'online' ? '#10b981' : '#f59e0b',
+              borderRadius: '50%',
+              border: '2px solid #1e293b'
+            }} />
           </div>
+
+          {/* Info */}
           <div style={{ flex: 1 }}>
-            <h3 style={{ color: 'white', fontWeight: 'bold', fontSize: '16px', margin: 0 }}>{vet.name}</h3>
-            <p style={{ color: '#94a3b8', fontSize: '14px', margin: '4px 0' }}>{vet.spec}</p>
+            <h3 style={{
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              margin: 0
+            }}>
+              {doc.name}
+            </h3>
+
+            <p style={{
+              color: '#94a3b8',
+              fontSize: '14px',
+              margin: '4px 0'
+            }}>
+              {doc.specialty}
+            </p>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ color: '#f59e0b' }}>⭐</span>
-              <span style={{ color: '#f59e0b', fontSize: '14px', fontWeight: '500' }}>{vet.rating}</span>
+              <span style={{
+                color: '#f59e0b',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}>
+                {doc.rating}
+              </span>
             </div>
           </div>
+
+          {/* Ações */}
           <div style={{ textAlign: 'right' }}>
-            <button style={{ padding: '8px 16px', background: vet.status === 'online' ? '#10b981' : '#475569', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', marginBottom: '4px' }}>
-              {vet.status === 'online' ? '📹' : '📅'}
+            <button style={{
+              padding: '8px 16px',
+              background: doc.status === 'online' ? '#10b981' : '#475569',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              marginBottom: '4px'
+            }}>
+              {doc.status === 'online' ? '📹' : '📅'}
             </button>
-            <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>R$ {vet.price}</p>
+
+            <p style={{
+              color: '#94a3b8',
+              fontSize: '12px',
+              margin: 0
+            }}>
+              R$ {doc.price}
+            </p>
           </div>
         </div>
       ))}
